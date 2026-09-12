@@ -1,0 +1,19 @@
+# secrets — never commit
+.env
+
+# the confidential task brief itself — must not be shared publicly per its own terms
+Swibit Backend Engineer Task -Hussein Ali.pdf
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# test / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# export files written by the background worker
+exports/

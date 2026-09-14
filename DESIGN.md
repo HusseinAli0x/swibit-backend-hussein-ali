@@ -124,6 +124,15 @@ without a bespoke login schema just for Swagger.
 protected route depends on it. There is no session state — invalidating a token before its
 natural expiry (e.g. logout-everywhere) is not implemented, a reasonable gap for this scope.
 
+**No refresh token, by design (for this scope):** there is a single access token with a fixed
+expiry and no server-side revocation list — a leaked or stolen token stays valid until it
+naturally expires. For this assessment's scope (single API instance, no logout-everywhere
+requirement), a single access token keeps the auth flow simple to read and test. A production
+version would split this into a short-lived access token (minutes) plus a refresh token
+stored server-side (e.g. a `refresh_tokens` table keyed by user, hashed, with an expiry and a
+revoked flag) so a compromised access token has a small blast radius and a compromised refresh
+token can actually be revoked.
+
 ## Authorization
 
 Enforced in the `crud` layer, not just the router: every fetch-by-id function
@@ -160,6 +169,17 @@ request-scoped one, because by the time a `BackgroundTasks` callback runs, the r
 On any exception during export, the job is marked `failed` with the exception message
 recorded — the source list and its items are never touched by the export path, so a failed
 export cannot corrupt them.
+
+**Export file storage is ephemeral by default, not a deliberate persistence strategy.**
+Exported files are written to `EXPORT_DIR` inside the container's local filesystem. In this
+repo's `docker-compose.yml`, the `api` service's `volumes: - .:/app` bind mount (added for
+dev hot-reload) happens to keep those files on the host disk across restarts — but that's a
+side effect of a dev-only mount, not something to rely on. In a production-like deployment
+without that bind mount, files in `EXPORT_DIR` would be lost on every container
+rebuild/restart, and wouldn't be visible to a second API replica either. A real deployment
+would need either a dedicated named volume for the export directory (durable across
+restarts, still single-host) or, better, object storage (S3-compatible) so exported files
+survive container churn and are reachable from any replica.
 
 ## Pagination
 

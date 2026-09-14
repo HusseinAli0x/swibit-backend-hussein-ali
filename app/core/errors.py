@@ -67,8 +67,13 @@ def register_exception_handlers(app: FastAPI) -> None:
     async def validation_exception_handler(
         request: Request, exc: RequestValidationError
     ) -> JSONResponse:
+        # exc.errors() includes an "input" key with the raw submitted value
+        # (e.g. a plaintext password); strip it so it never round-trips in a response.
+        safe_errors = [
+            {k: v for k, v in error.items() if k != "input"} for error in exc.errors()
+        ]
         return JSONResponse(
             status_code=422,
             content=_error_body("validation_error", "Request data failed validation.")
-            | {"details": exc.errors()},
+            | {"details": safe_errors},
         )

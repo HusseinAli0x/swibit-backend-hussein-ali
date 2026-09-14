@@ -33,6 +33,17 @@ def test_password_hash_never_appears_in_responses(client: TestClient) -> None:
     assert "password_hash" not in resp.text
 
 
+def test_invalid_password_is_not_echoed_in_validation_error(client: TestClient) -> None:
+    raw_password = "abc123"  # below min_length=8, triggers 422
+    resp = client.post(
+        "/auth/register", json={"email": "dave@example.com", "password": raw_password}
+    )
+    assert resp.status_code == 422
+    assert raw_password not in resp.text
+    for error in resp.json()["details"]:
+        assert "input" not in error
+
+
 def test_unauthenticated_access_to_protected_route_is_rejected(client: TestClient) -> None:
     resp = client.get("/lists")
     assert resp.status_code == 401
